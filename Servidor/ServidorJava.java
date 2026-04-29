@@ -16,22 +16,19 @@ import java.util.concurrent.LinkedBlockingQueue;
 
 public class ServidorJava {
 
-    // ==========================================
-    // CONFIGURAÇÕES DA ARQUITETURA (Agora como atributos da instância)
-    // ==========================================
-    private final int PORTA = 8080;
-    private final int MAX_CLIENTES = 5;
-
-    // Estruturas de Concorrência
-    // 1. Fila FIFO 100% Thread-Safe
-    private final BlockingQueue<Requisicao> filaProcessamento = new LinkedBlockingQueue<>();
     
-    // 2. Controlo de IPs com Set Sincronizado
-    private final Set<String> ipsConectados = Collections.synchronizedSet(new HashSet<>());
+    // CONFIGURAÇÕES DA ARQUITETURA
+    
+    private final int PORTA = 8080;
+    private final int MAX_SIMULTANEAS = 5;
 
-    // Classe interna para encapsular os dados da fila.
-    // Mantém-se 'static' pois funciona apenas como uma estrutura de dados burra (DTO)
-    // que não precisa aceder aos métodos/variáveis da classe externa (ServidorJava).
+    // Fila FIFO 100% Thread-Safe
+    private final BlockingQueue<Requisicao> filaProcessamento = new LinkedBlockingQueue<>(MAX_SIMULTANEAS);
+    
+    // Controle de IPs
+    private final Set<String> ipsAtivos = Collections.synchronizedSet(new HashSet<>());
+
+    // Classe interna para encapsular os dados da fila
     static class Requisicao {
         Socket socket;
         String ip;
@@ -44,64 +41,46 @@ public class ServidorJava {
         }
     }
 
-    // ==========================================
-    // PONTO DE ENTRADA (Único método estático)
-    // ==========================================
     public static void main(String[] args) {
-        // Instanciação: Criamos um objeto do servidor em vez de usar variáveis globais.
-        // Assim, aplicamos corretamente a Orientação a Objetos.
         ServidorJava servidor = new ServidorJava();
         servidor.iniciar();
     }
 
-    // ==========================================
-    // LÓGICA PRINCIPAL (
-    // ==========================================
     public void iniciar() {
         System.out.println("=== SERVIDOR JAVA INICIADO ===");
         System.out.println("[*] A escutar na porta " + PORTA + " (LAN/0.0.0.0)");
 
-        // Inicia a Thread Consumidora (FIFO) referenciando o método da instância (this::processadorFifo)
-        Thread threadFifo = new Thread(this::processadorFifo);
-        threadFifo.setDaemon(true);
-        threadFifo.start();
+        // 1. Inicia 5 Threads Consumidoras. 
+        for (int i = 0; i < MAX_SIMULTANEAS; i++) {
+            Thread threadConsumidora = new Thread(this::processadorFifo);
+            threadConsumidora.setDaemon(true);
+            threadConsumidora.start();
+        }
 
         try (ServerSocket serverSocket = new ServerSocket(PORTA, 50, InetAddress.getByName("0.0.0.0"))) {
-            System.out.println("[*] Servidor pronto. A aceitar até " + MAX_CLIENTES + " ligações...\n");
+            System.out.println("[*] Servidor pronto. Trabalhadores ativos: " + MAX_SIMULTANEAS + "\n");
 
-            int clientesAtendidos = 0;
-
-            while (clientesAtendidos < MAX_CLIENTES) {
+            // Loop infinito: o servidor nunca se desliga sozinho
+            while (true) {
                 Socket conexao = serverSocket.accept();
                 String ipCliente = conexao.getInetAddress().getHostAddress();
 
-                // Validação de IP para bloquear testes da mesma máquina
-                if (ipsConectados.contains(ipCliente)) {
-                    System.out.println("[SEGURANÇA] Ligação duplicada rejeitada do IP " + ipCliente);
+                
+                if (ipsAtivos.contains(ipCliente)) {
+                    System.out.println("[SEGURANÇA] Ligação simultânea rejeitada do IP " + ipCliente);
                     PrintWriter saidaErro = new PrintWriter(conexao.getOutputStream(), true);
                     saidaErro.println("ERRO_IP");
                     conexao.close();
-                    continue; // Ignora e volta a aguardar
+                    continue; 
                 }
 
-                ipsConectados.add(ipCliente);
-                clientesAtendidos++;
-                
-                System.out.println("[NOVA LIGAÇÃO] Cliente " + clientesAtendidos + "/" + MAX_CLIENTES + " ligado (IP: " + ipCliente + ")");
+                // Adiciona o IP à lista de bloqueio temporário
+                ipsAtivos.add(ipCliente);
+                System.out.println("[NOVA LIGAÇÃO] Cliente ligado (IP: " + ipCliente + ")");
 
-                // Dispara Thread Produtora para este cliente referenciando o método da instância
+                // Dispara Thread para ler a mensagem do cliente
                 new Thread(() -> this.recepcionistaClientes(conexao, ipCliente)).start();
             }
-
-            System.out.println("\n[SISTEMA] Lotação máxima atingida (5 clientes distintos)!");
-
-            // Evita que o servidor feche antes da fila ser esvaziada
-            while (!filaProcessamento.isEmpty()) {
-                Thread.sleep(1000);
-            }
-            // Pequeno delay final para garantir que as últimas respostas viajam pela rede
-            Thread.sleep(2000); 
-            System.out.println("=== TODAS AS REQUISIÇÕES ATENDIDAS. A ENCERRAR O SISTEMA ===");
 
         } catch (Exception e) {
             System.err.println("[ERRO FATAL NO SERVIDOR] " + e.getMessage());
@@ -109,40 +88,40 @@ public class ServidorJava {
         }
     }
 
-    // ==========================================
-    // THREAD PRODUTORA (Por Cliente) 
-    // ==========================================
+    
+    // THREAD PRODUTORA 
+    
     private void recepcionistaClientes(Socket conexao, String ip) {
         try {
             BufferedReader entrada = new BufferedReader(new InputStreamReader(conexao.getInputStream()));
 
-            // Lê o NÚMERO ou TEXTO que o cliente enviou
             String opcao = entrada.readLine();
             if (opcao != null) {
-                System.out.println("[REDE] Mensagem recebida do IP " + ip + " -> Opção/Texto: " + opcao);
-                // Coloca na Fila (Queue) de forma 100% segura
+                System.out.println("[REDE] Mensagem recebida do IP " + ip + " -> Opção: " + opcao);
+                // Coloca na fila. Se a fila estiver cheia (5 elementos), aguarda automaticamente.
                 filaProcessamento.put(new Requisicao(conexao, ip, opcao));
             } else {
+                ipsAtivos.remove(ip); // Liberta o IP se o cliente enviou mensagem nula
                 conexao.close();
             }
 
         } catch (Exception e) {
+            ipsAtivos.remove(ip); // Liberta o IP em caso de erro na leitura
             System.err.println("[ERRO] Falha com o cliente " + ip + ": " + e.getMessage());
         }
     }
 
-    // ==========================================
-    // THREAD CONSUMIDORA (Única) - Agora sem 'static'
-    // ==========================================
+    
+    // THREAD CONSUMIDORA 
+    
     private void processadorFifo() {
-        System.out.println("[SISTEMA] Thread Processadora (FIFO) iniciada. A aguardar dados...");
         while (true) {
+            Requisicao req = null;
             try {
-                // Bloqueia até haver um item na fila
-                Requisicao req = filaProcessamento.take();
+                // Fica a aguardar que chegue um pedido à fila
+                req = filaProcessamento.take();
                 
                 String resposta;
-                // Lógica robusta do Menu: Trata o que conhece, rejeita o que desconhece
                 switch (req.opcao.trim()) {
                     case "1":
                         DateTimeFormatter dtf = DateTimeFormatter.ofPattern("dd/MM/yyyy HH:mm:ss");
@@ -152,30 +131,35 @@ public class ServidorJava {
                         resposta = "Versao: Servidor Distribuido LAN v2.0 (Java Edition).";
                         break;
                     case "3":
-                        resposta = "Status Lotação: Servidor aceita 5 conexoes no total.";
+                        resposta = "Status Lotacao: Servidor a operar com limite de 5 sessoes simultaneas.";
                         break;
                     case "4":
-                        resposta = "Uptime: 48 horas online sem interrupcoes.";
+                        resposta = "Uptime: Servidor estavel e robusto.";
                         break;
                     default:
-                        // O SERVIDOR REJEITA COMANDOS DESCONHECIDOS AQUI
-                        resposta = "ERRO: Comando [" + req.opcao + "] desconhecido. O servidor so entende comandos de 1 a 4.";
+                        resposta = "ERRO: Comando [" + req.opcao + "] desconhecido.";
                 }
 
-                // Atraso didático para evidenciar o processamento sequencial no terminal
-                Thread.sleep(500);
+                // Atraso de 2 segundos
+                
+                Thread.sleep(2000);
 
                 PrintWriter saida = new PrintWriter(req.socket.getOutputStream(), true);
                 saida.println(resposta);
-                System.out.println("[PROCESSAMENTO FIFO] Resposta enviada para o IP " + req.ip + " -> " + resposta);
-
-                // Fecha a ligação após responder
-                req.socket.close();
+                System.out.println("[PROCESSAMENTO] Resposta enviada para o IP " + req.ip + " -> " + resposta);
 
             } catch (InterruptedException e) {
-                break; // Se a thread for interrompida, encerra silenciosamente
+                break; 
             } catch (Exception e) {
                 System.err.println("[ERRO NO PROCESSAMENTO] " + e.getMessage());
+            } finally {
+                // 3. Libertação da Vaga 
+                if (req != null) {
+                    ipsAtivos.remove(req.ip);
+                    try {
+                        req.socket.close();
+                    } catch (Exception ignore) {}
+                }
             }
         }
     }

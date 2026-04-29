@@ -8,24 +8,19 @@ import java.util.Scanner;
 
 public class ClienteJava {
     
-    // 1. Variáveis de instância (sem 'static')
+    // Variáveis de instância
     private final String IP_SERVIDOR_PADRAO = "10.33.226.42";
     private final int PORTA = 8080;
 
-    // 2. O main apenas cria o objeto e inicia o processo
     public static void main(String[] args) {
         ClienteJava cliente = new ClienteJava();
         cliente.iniciar(args);
     }
 
-    // 3. Toda a lógica vem para um método pertencente ao objeto
     public void iniciar(String[] args) {
         Scanner scanner = new Scanner(System.in);
-        
-        // Pega o IP dos argumentos ou usa o padrão da instância
         String host = (args.length > 0) ? args[0] : this.IP_SERVIDOR_PADRAO;
 
-        // Mostrar o Menu ANTES de conectar
         System.out.println("======================================");
         System.out.println("   BEM-VINDO AO CLIENTE   ");
         System.out.println("======================================");
@@ -41,24 +36,22 @@ public class ClienteJava {
 
         System.out.println("\n[*] A ligar ao Servidor em " + host + ":" + PORTA + "...");
 
-        // Conexão e Comunicação Imediata
         try (Socket socket = new Socket(host, PORTA);
              PrintWriter saida = new PrintWriter(socket.getOutputStream(), true);
              BufferedReader entrada = new BufferedReader(new InputStreamReader(socket.getInputStream()))) {
 
             System.out.println("[*] Ligação estabelecida! A enviar a mensagem: [" + opcaoEscolhida + "]");
             
-            // Envia a opção imediatamente
             saida.println(opcaoEscolhida);
 
             System.out.println("[*] A aguardar a resposta da Fila (FIFO) do Servidor...");
             
-            // Bloqueio Síncrono final a aguardar a resposta
             String resposta = entrada.readLine();
 
+            
             if ("ERRO_IP".equals(resposta)) {
                 System.out.println("\n[ERRO DE SEGURANÇA] O servidor rejeitou a ligação!");
-                System.out.println("Este IP já consumiu a sua vaga. O teste exige máquinas diferentes.");
+                System.out.println("Este IP já tem uma requisição em curso. Aguarde a finalização da anterior.");
             } else if (resposta != null) {
                 System.out.println("\n===============================================");
                 System.out.println("  RESPOSTA DO SERVIDOR: " + resposta);
