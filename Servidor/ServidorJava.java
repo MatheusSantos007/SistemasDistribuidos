@@ -127,7 +127,7 @@ public class ServidorJava {
                 Requisicao req = filaProcessamento.take();
                 
                 String resposta;
-                // Lógica robusta do Menu: Trata o que conhece, rejeita o que desconhece
+                // Lógica do Menu
                 switch (req.opcao.trim()) {
                     case "1":
                         DateTimeFormatter dtf = DateTimeFormatter.ofPattern("dd/MM/yyyy HH:mm:ss");

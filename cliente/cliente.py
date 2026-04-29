@@ -8,7 +8,7 @@ IP_SERVIDOR = "10.85.28.42"
 PORTA = 8080
 
 def main():
-    # 1. Pega o IP dos argumentos ou usa o padrão (igual ao args[0] do Java)
+    # Pega o IP dos argumentos ou usa o padrão 
     host = sys.argv[1] if len(sys.argv) > 1 else IP_SERVIDOR
 
     # 2. Mostrar o Menu ANTES de conectar
@@ -26,7 +26,7 @@ def main():
 
     print(f"\n[*] A ligar ao Servidor em {host}:{PORTA}...")
 
-    # 3. Conexão e Comunicação Imediata
+    # Conexão e Comunicação Imediata
     try:
         # Cria o socket TCP (IPv4, Stream)
         with socket.socket(socket.AF_INET, socket.SOCK_STREAM) as s:
@@ -42,7 +42,7 @@ def main():
 
             print("[*] A aguardar a resposta da Fila (FIFO) do Servidor...")
             
-            # Bloqueio Síncrono aguardando a resposta (lê até 1024 bytes)
+            # Bloqueio Síncrono aguardando a resposta
             dados = s.recv(1024)
             resposta = dados.decode('utf-8').strip()
 
