@@ -18,8 +18,8 @@ def main():
     print("Escolha uma das perguntas para o Servidor:")
     print(" [1] - Qual o horário do Servidor?")
     print(" [2] - Qual a versão do Sistema?")
-    print(" [3] - Qual o status de Lotação?")
-    print(" [4] - Qual o uptime do Servidor?")
+    print(" [3] - Qual o(a) melhor professo(a)r do IFPB Campus Guarabira")
+    print(" [4] - Qual o Melhor time do Mundo?")
     print("\n (Pode tentar digitar outra coisa para testar a validação do servidor)")
     
     opcao_escolhida = input("Digite a sua opção: ").strip()

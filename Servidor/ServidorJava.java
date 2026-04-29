@@ -137,10 +137,10 @@ public class ServidorJava {
                         resposta = "Versao: Servidor Distribuido LAN v2.0 (Java Edition).";
                         break;
                     case "3":
-                        resposta = "Status Lotação: Servidor aceita 5 conexoes no total.";
+                        resposta = "Gabriela";
                         break;
                     case "4":
-                        resposta = "Uptime: 48 horas online sem interrupcoes.";
+                        resposta = "Flamengo";
                         break;
                     default:
                         // O SERVIDOR REJEITA COMANDOS DESCONHECIDOS 

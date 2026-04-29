@@ -23,8 +23,8 @@ public class ClienteJava {
         System.out.println("Escolha uma das perguntas para o Servidor:");
         System.out.println(" [1] - Qual o horário do Servidor?");
         System.out.println(" [2] - Qual a versão do Sistema?");
-        System.out.println(" [3] - Qual o status de Lotação?");
-        System.out.println(" [4] - Qual o uptime do Servidor?");
+        System.out.println(" [3] - Qual o(a) melhor professo(a)r do IFPB Campus Guarabira?");
+        System.out.println(" [4] - Qual o Melhor time do Mundo?");
         System.out.println("\n (Pode tentar digitar outra coisa para testar a validação do servidor)");
         System.out.print("Digite a sua opção: ");
         
