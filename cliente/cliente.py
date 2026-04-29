@@ -4,7 +4,7 @@ import sys
 
 # CONFIGURAÇÕES DO CLIENTE
 
-IP_SERVIDOR = "10.85.28.42"  
+IP_SERVIDOR = "10.33.226.42"
 PORTA = 8080
 
 def main():

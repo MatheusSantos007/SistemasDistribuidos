@@ -16,20 +16,22 @@ import java.util.concurrent.LinkedBlockingQueue;
 
 public class ServidorJava {
 
-    
-    // CONFIGURAÇÕES DA ARQUITETURA
-    
-    private static final int PORTA = 8080;
-    private static final int MAX_CLIENTES = 5;
+    // ==========================================
+    // CONFIGURAÇÕES DA ARQUITETURA (Agora como atributos da instância)
+    // ==========================================
+    private final int PORTA = 8080;
+    private final int MAX_CLIENTES = 5;
 
+    // Estruturas de Concorrência
+    // 1. Fila FIFO 100% Thread-Safe
+    private final BlockingQueue<Requisicao> filaProcessamento = new LinkedBlockingQueue<>();
     
-    // Fila FIFO 100% Thread-Safe
-    private static final BlockingQueue<Requisicao> filaProcessamento = new LinkedBlockingQueue<>();
-    
-    // Controle de IPs com Set Sincronizado
-    private static final Set<String> ipsConectados = Collections.synchronizedSet(new HashSet<>());
+    // 2. Controlo de IPs com Set Sincronizado
+    private final Set<String> ipsConectados = Collections.synchronizedSet(new HashSet<>());
 
-    // Classe interna para encapsular os dados da fila
+    // Classe interna para encapsular os dados da fila.
+    // Mantém-se 'static' pois funciona apenas como uma estrutura de dados burra (DTO)
+    // que não precisa aceder aos métodos/variáveis da classe externa (ServidorJava).
     static class Requisicao {
         Socket socket;
         String ip;
@@ -42,12 +44,25 @@ public class ServidorJava {
         }
     }
 
+    // ==========================================
+    // PONTO DE ENTRADA (Único método estático)
+    // ==========================================
     public static void main(String[] args) {
+        // Instanciação: Criamos um objeto do servidor em vez de usar variáveis globais.
+        // Assim, aplicamos corretamente a Orientação a Objetos.
+        ServidorJava servidor = new ServidorJava();
+        servidor.iniciar();
+    }
+
+    // ==========================================
+    // LÓGICA PRINCIPAL (
+    // ==========================================
+    public void iniciar() {
         System.out.println("=== SERVIDOR JAVA INICIADO ===");
         System.out.println("[*] A escutar na porta " + PORTA + " (LAN/0.0.0.0)");
 
-        // Inicia a Thread Consumidora (FIFO)
-        Thread threadFifo = new Thread(ServidorJava::processadorFifo);
+        // Inicia a Thread Consumidora (FIFO) referenciando o método da instância (this::processadorFifo)
+        Thread threadFifo = new Thread(this::processadorFifo);
         threadFifo.setDaemon(true);
         threadFifo.start();
 
@@ -74,8 +89,8 @@ public class ServidorJava {
                 
                 System.out.println("[NOVA LIGAÇÃO] Cliente " + clientesAtendidos + "/" + MAX_CLIENTES + " ligado (IP: " + ipCliente + ")");
 
-                // Dispara Thread Produtora para este cliente lidar com o pedido concorrentemente
-                new Thread(() -> recepcionistaClientes(conexao, ipCliente)).start();
+                // Dispara Thread Produtora para este cliente referenciando o método da instância
+                new Thread(() -> this.recepcionistaClientes(conexao, ipCliente)).start();
             }
 
             System.out.println("\n[SISTEMA] Lotação máxima atingida (5 clientes distintos)!");
@@ -84,7 +99,7 @@ public class ServidorJava {
             while (!filaProcessamento.isEmpty()) {
                 Thread.sleep(1000);
             }
-            // Pequeno delay final
+            // Pequeno delay final para garantir que as últimas respostas viajam pela rede
             Thread.sleep(2000); 
             System.out.println("=== TODAS AS REQUISIÇÕES ATENDIDAS. A ENCERRAR O SISTEMA ===");
 
@@ -94,10 +109,10 @@ public class ServidorJava {
         }
     }
 
-    
-    // THREAD PRODUTORA (Por Cliente)
-    
-    private static void recepcionistaClientes(Socket conexao, String ip) {
+    // ==========================================
+    // THREAD PRODUTORA (Por Cliente) 
+    // ==========================================
+    private void recepcionistaClientes(Socket conexao, String ip) {
         try {
             BufferedReader entrada = new BufferedReader(new InputStreamReader(conexao.getInputStream()));
 
@@ -105,7 +120,7 @@ public class ServidorJava {
             String opcao = entrada.readLine();
             if (opcao != null) {
                 System.out.println("[REDE] Mensagem recebida do IP " + ip + " -> Opção/Texto: " + opcao);
-                // Coloca na Fila (Queue) 
+                // Coloca na Fila (Queue) de forma 100% segura
                 filaProcessamento.put(new Requisicao(conexao, ip, opcao));
             } else {
                 conexao.close();
@@ -116,10 +131,10 @@ public class ServidorJava {
         }
     }
 
-    
-    // THREAD CONSUMIDORA (Única)
-    
-    private static void processadorFifo() {
+    // ==========================================
+    // THREAD CONSUMIDORA (Única) - Agora sem 'static'
+    // ==========================================
+    private void processadorFifo() {
         System.out.println("[SISTEMA] Thread Processadora (FIFO) iniciada. A aguardar dados...");
         while (true) {
             try {
@@ -127,7 +142,7 @@ public class ServidorJava {
                 Requisicao req = filaProcessamento.take();
                 
                 String resposta;
-                // Lógica do Menu
+                // Lógica robusta do Menu: Trata o que conhece, rejeita o que desconhece
                 switch (req.opcao.trim()) {
                     case "1":
                         DateTimeFormatter dtf = DateTimeFormatter.ofPattern("dd/MM/yyyy HH:mm:ss");
@@ -137,17 +152,17 @@ public class ServidorJava {
                         resposta = "Versao: Servidor Distribuido LAN v2.0 (Java Edition).";
                         break;
                     case "3":
-                        resposta = "Gabriela";
+                        resposta = "Status Lotação: Servidor aceita 5 conexoes no total.";
                         break;
                     case "4":
-                        resposta = "Flamengo";
+                        resposta = "Uptime: 48 horas online sem interrupcoes.";
                         break;
                     default:
-                        // O SERVIDOR REJEITA COMANDOS DESCONHECIDOS 
+                        // O SERVIDOR REJEITA COMANDOS DESCONHECIDOS AQUI
                         resposta = "ERRO: Comando [" + req.opcao + "] desconhecido. O servidor so entende comandos de 1 a 4.";
                 }
 
-                
+                // Atraso didático para evidenciar o processamento sequencial no terminal
                 Thread.sleep(500);
 
                 PrintWriter saida = new PrintWriter(req.socket.getOutputStream(), true);
