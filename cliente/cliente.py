@@ -49,7 +49,7 @@ def main():
             # 4. Exibição da Resposta
             if resposta == "ERRO_IP":
                 print("\n[ERRO DE SEGURANÇA] O servidor rejeitou a ligação!")
-                print("Este IP já consumiu a sua vaga. O teste exige máquinas diferentes.")
+                print("")
             elif resposta:
                 print("\n===============================================")
                 print(f"  RESPOSTA DO SERVIDOR: {resposta}")
