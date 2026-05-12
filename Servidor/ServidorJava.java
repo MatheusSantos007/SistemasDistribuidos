@@ -131,10 +131,10 @@ public class ServidorJava {
                         resposta = "Versao: Servidor Distribuido LAN v2.0 (Java Edition).";
                         break;
                     case "3":
-                        resposta = "Status Lotacao: Servidor a operar com limite de 5 sessoes simultaneas.";
+                        resposta = "Gabriela.";
                         break;
                     case "4":
-                        resposta = "Uptime: Servidor estavel e robusto.";
+                        resposta = "Flamengo.";
                         break;
                     default:
                         resposta = "ERRO: Comando [" + req.opcao + "] desconhecido.";

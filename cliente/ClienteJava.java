@@ -62,7 +62,7 @@ public class ClienteJava {
 
         } catch (Exception e) {
             System.err.println("[ERRO REDE/FATAL] Não foi possível ligar.");
-            System.err.println("Verifique se o Servidor está a correr e se o IP " + host + " está correto.");
+            System.err.println("Verifique se o Servidor está funcionando e se o IP " + host + " está correto.");
         } finally {
             scanner.close();
             System.out.println("[*] Sistema cliente encerrado.");
